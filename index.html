@@ -25,6 +25,7 @@
     }
     h1 { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
     .subtitle { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+
     .option-card {
       background: #fff;
       border: 2px solid #e0e0e0;
@@ -51,6 +52,7 @@
     .option-card.selected .checkmark { background: #534AB7; border-color: #534AB7; color: white; }
     .option-icon { font-size: 22px; width: 28px; text-align: center; }
     .option-label { font-size: 16px; font-weight: 500; color: #1a1a1a; }
+
     .counter { font-size: 13px; color: #888; text-align: center; margin: 14px 0 0; }
     .vote-btn {
       width: 100%; padding: 13px; border-radius: 10px;
@@ -61,6 +63,7 @@
     .vote-btn:hover:not(:disabled) { opacity: 0.88; }
     .vote-btn:disabled { background: #e8e8e8; color: #aaa; cursor: not-allowed; }
     .hint { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; }
+
     #result-section { display: none; }
     .success-msg { text-align: center; padding: 1rem 0 1.5rem; }
     .success-icon {
@@ -71,18 +74,28 @@
     }
     .success-msg h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
     .success-msg p { font-size: 13px; color: #888; }
+
     .results-title { font-size: 13px; font-weight: 600; color: #888; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 14px; }
     .result-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .result-label { font-size: 14px; font-weight: 500; color: #1a1a1a; min-width: 72px; }
     .result-bar-bg { flex: 1; background: #f0eff8; border-radius: 99px; height: 10px; overflow: hidden; }
     .result-bar { background: #534AB7; height: 100%; border-radius: 99px; transition: width 0.7s ease; }
     .result-count { font-size: 13px; color: #888; min-width: 64px; text-align: right; }
-    .result-total { font-size: 12px; color: #aaa; text-align: center; margin-top: 4px; }
+    .result-total { font-size: 12px; color: #aaa; text-align: center; margin-top: 8px; }
+
+    .loading-msg { font-size: 13px; color: #aaa; text-align: center; margin-top: 8px; }
+
     .spinner {
       display: inline-block; width: 16px; height: 16px;
       border: 2px solid #fff; border-top-color: transparent;
       border-radius: 50%; animation: spin 0.7s linear infinite;
       vertical-align: middle; margin-right: 8px;
+    }
+    .spinner-dark {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid #ccc; border-top-color: #534AB7;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -93,17 +106,17 @@
   <p class="subtitle">Du kannst bis zu 2 Optionen auswählen. Jede Person kann nur einmal abstimmen.</p>
 
   <div id="vote-section">
-    <div class="option-card" data-option="Podcast" onclick="toggleOption(this)">
+    <div class="option-card" data-option="podcast" onclick="toggleOption(this)">
       <div class="checkmark">&#10003;</div>
       <span class="option-icon">🎙</span>
       <span class="option-label">Podcast</span>
     </div>
-    <div class="option-card" data-option="Flyer" onclick="toggleOption(this)">
+    <div class="option-card" data-option="flyer" onclick="toggleOption(this)">
       <div class="checkmark">&#10003;</div>
       <span class="option-icon">📄</span>
       <span class="option-label">Flyer</span>
     </div>
-    <div class="option-card" data-option="Zeitung" onclick="toggleOption(this)">
+    <div class="option-card" data-option="zeitung" onclick="toggleOption(this)">
       <div class="checkmark">&#10003;</div>
       <span class="option-icon">📰</span>
       <span class="option-label">Zeitung</span>
@@ -115,12 +128,14 @@
   </div>
 
   <div id="result-section">
-    <div class="success-msg">
+    <div class="success-msg" id="success-msg">
       <div class="success-icon">&#10003;</div>
       <h2>Danke für deine Teilnahme!</h2>
       <p>Deine Stimmen wurden gezählt.</p>
     </div>
-    <p class="results-title">Deine Auswahl</p>
+
+    <p class="results-title">Aktuelle Ergebnisse aller Teilnehmer</p>
+
     <div class="result-row">
       <span class="result-label">Podcast</span>
       <div class="result-bar-bg"><div class="result-bar" id="bar-podcast" style="width:0%"></div></div>
@@ -136,16 +151,16 @@
       <div class="result-bar-bg"><div class="result-bar" id="bar-zeitung" style="width:0%"></div></div>
       <span class="result-count" id="count-zeitung">–</span>
     </div>
-    <p class="result-total">Die Gesamtergebnisse aller Teilnehmer sind nur für den Kursleiter sichtbar.</p>
+
+    <p class="result-total" id="result-total"></p>
+    <p class="loading-msg" id="loading-msg"><span class="spinner-dark"></span>Ergebnisse werden geladen…</p>
   </div>
 </div>
 
 <script>
-  const FORM_ID   = '1hVWpdU-HZy8uQw7MSi-VmKobbk38kFbcMu4VqXDJPV0';
-  const ENTRY_ID  = 'entry.1656248590';
-  const FORM_URL  = 'https://docs.google.com/forms/d/' + FORM_ID + '/formResponse';
-  const VOTED_KEY = 'abstimmung_voted_v1';
-  const selected  = new Set();
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxZ-VsccrY617tos1tSViGWRhse9y9V-wSP_mHbeEKTynYfeopwZKqPcYIfoxWmTtSlag/exec';
+  const VOTED_KEY  = 'abstimmung_voted_v1';
+  const selected   = new Set();
 
   function hasVoted() {
     return !!localStorage.getItem(VOTED_KEY);
@@ -166,37 +181,74 @@
     document.getElementById('vote-btn').disabled = n === 0;
   }
 
-  async function sendToGoogle(option) {
-    const body = new FormData();
-    body.append(ENTRY_ID, option);
-    await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body });
-  }
-
   async function submitVote() {
     const btn = document.getElementById('vote-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Wird gespeichert\u2026';
 
-    await Promise.all([...selected].map(opt => sendToGoogle(opt)));
-
-    localStorage.setItem(VOTED_KEY, JSON.stringify([...selected]));
-    showResults([...selected]);
-  }
-
-  function showResults(choices) {
-    document.getElementById('vote-section').style.display = 'none';
-    document.getElementById('result-section').style.display = 'block';
-    setTimeout(() => {
-      ['Podcast', 'Flyer', 'Zeitung'].forEach(opt => {
-        const chosen = choices.includes(opt);
-        document.getElementById('bar-' + opt.toLowerCase()).style.width = chosen ? '100%' : '0%';
-        document.getElementById('count-' + opt.toLowerCase()).textContent = chosen ? 'Gewählt' : 'Nicht gewählt';
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          podcast:  selected.has('podcast'),
+          flyer:    selected.has('flyer'),
+          zeitung:  selected.has('zeitung')
+        })
       });
-    }, 100);
+    } catch (e) { /* no-cors: ignorieren */ }
+
+    localStorage.setItem(VOTED_KEY, '1');
+    showResultSection();
+    loadResults();
   }
 
+  async function loadResults() {
+    document.getElementById('loading-msg').style.display = 'block';
+    document.getElementById('result-total').textContent = '';
+    try {
+      const res  = await fetch(SCRIPT_URL);
+      const data = await res.json();
+      renderResults(data);
+    } catch (e) {
+      document.getElementById('loading-msg').textContent = 'Ergebnisse konnten nicht geladen werden.';
+    }
+  }
+
+  function renderResults(data) {
+    document.getElementById('loading-msg').style.display = 'none';
+    const podcast  = data.podcast  || 0;
+    const flyer    = data.flyer    || 0;
+    const zeitung  = data.zeitung  || 0;
+    const total    = podcast + flyer + zeitung;
+    const pct      = v => total > 0 ? Math.round(v / total * 100) : 0;
+    const label    = v => v + ' Stimme' + (v !== 1 ? 'n' : '') + ' (' + pct(v) + '%)';
+
+    document.getElementById('bar-podcast').style.width  = pct(podcast)  + '%';
+    document.getElementById('bar-flyer').style.width    = pct(flyer)    + '%';
+    document.getElementById('bar-zeitung').style.width  = pct(zeitung)  + '%';
+    document.getElementById('count-podcast').textContent  = label(podcast);
+    document.getElementById('count-flyer').textContent    = label(flyer);
+    document.getElementById('count-zeitung').textContent  = label(zeitung);
+    document.getElementById('result-total').textContent   =
+      'Insgesamt ' + total + ' Stimme' + (total !== 1 ? 'n' : '') + ' von allen Teilnehmern.';
+  }
+
+  function showResultSection() {
+    document.getElementById('vote-section').style.display   = 'none';
+    document.getElementById('result-section').style.display = 'block';
+    // Erfolgsmeldung nur zeigen wenn gerade abgestimmt wurde
+    document.getElementById('success-msg').style.display = 'block';
+  }
+
+  // Init
   if (hasVoted()) {
-    showResults(JSON.parse(localStorage.getItem(VOTED_KEY) || '[]'));
+    document.getElementById('success-msg') && (document.getElementById('success-msg').style.display = 'none');
+    showResultSection();
+    // Erfolgsmeldung ausblenden wenn bereits früher abgestimmt
+    document.getElementById('success-msg').style.display = 'none';
+    loadResults();
   }
 </script>
 </body>
