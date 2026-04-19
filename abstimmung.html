@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Abstimmung – Kommunikationsmittel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    h1 { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+    .subtitle { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+    .option-card {
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+    .option-card:hover { border-color: #aaa; background: #fafafa; }
+    .option-card.selected { border-color: #534AB7; background: #EEEDFE; }
+    .option-card.selected .option-label { color: #3C3489; }
+    .checkmark {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid #ccc;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 13px; color: transparent;
+      transition: all 0.15s;
+    }
+    .option-card.selected .checkmark { background: #534AB7; border-color: #534AB7; color: white; }
+    .option-icon { font-size: 22px; width: 28px; text-align: center; }
+    .option-label { font-size: 16px; font-weight: 500; color: #1a1a1a; }
+    .counter { font-size: 13px; color: #888; text-align: center; margin: 14px 0 0; }
+    .vote-btn {
+      width: 100%; padding: 13px; border-radius: 10px;
+      background: #534AB7; color: white; border: none;
+      font-size: 15px; font-weight: 500; cursor: pointer;
+      margin-top: 1.25rem; transition: opacity 0.15s;
+    }
+    .vote-btn:hover:not(:disabled) { opacity: 0.88; }
+    .vote-btn:disabled { background: #e8e8e8; color: #aaa; cursor: not-allowed; }
+    .hint { font-size: 12px; color: #aaa; text-align: center; margin-top: 10px; }
+    #result-section { display: none; }
+    .success-msg { text-align: center; padding: 1rem 0 1.5rem; }
+    .success-icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: #EEEDFE; color: #534AB7;
+      font-size: 22px; display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+    }
+    .success-msg h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+    .success-msg p { font-size: 13px; color: #888; }
+    .results-title { font-size: 13px; font-weight: 600; color: #888; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 14px; }
+    .result-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .result-label { font-size: 14px; font-weight: 500; color: #1a1a1a; min-width: 72px; }
+    .result-bar-bg { flex: 1; background: #f0eff8; border-radius: 99px; height: 10px; overflow: hidden; }
+    .result-bar { background: #534AB7; height: 100%; border-radius: 99px; transition: width 0.7s ease; }
+    .result-count { font-size: 13px; color: #888; min-width: 64px; text-align: right; }
+    .result-total { font-size: 12px; color: #aaa; text-align: center; margin-top: 4px; }
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>Welches Medium bevorzugst du?</h1>
+  <p class="subtitle">Du kannst bis zu 2 Optionen auswählen. Jede Person kann nur einmal abstimmen.</p>
+
+  <div id="vote-section">
+    <div class="option-card" data-option="Podcast" onclick="toggleOption(this)">
+      <div class="checkmark">&#10003;</div>
+      <span class="option-icon">🎙</span>
+      <span class="option-label">Podcast</span>
+    </div>
+    <div class="option-card" data-option="Flyer" onclick="toggleOption(this)">
+      <div class="checkmark">&#10003;</div>
+      <span class="option-icon">📄</span>
+      <span class="option-label">Flyer</span>
+    </div>
+    <div class="option-card" data-option="Zeitung" onclick="toggleOption(this)">
+      <div class="checkmark">&#10003;</div>
+      <span class="option-icon">📰</span>
+      <span class="option-label">Zeitung</span>
+    </div>
+
+    <p class="counter" id="counter">0 von 2 Stimmen vergeben</p>
+    <button class="vote-btn" id="vote-btn" disabled onclick="submitVote()">Abstimmen</button>
+    <p class="hint">Anonym &amp; einmalig – keine personenbezogenen Daten werden gespeichert.</p>
+  </div>
+
+  <div id="result-section">
+    <div class="success-msg">
+      <div class="success-icon">&#10003;</div>
+      <h2>Danke für deine Teilnahme!</h2>
+      <p>Deine Stimmen wurden gezählt.</p>
+    </div>
+    <p class="results-title">Deine Auswahl</p>
+    <div class="result-row">
+      <span class="result-label">Podcast</span>
+      <div class="result-bar-bg"><div class="result-bar" id="bar-podcast" style="width:0%"></div></div>
+      <span class="result-count" id="count-podcast">–</span>
+    </div>
+    <div class="result-row">
+      <span class="result-label">Flyer</span>
+      <div class="result-bar-bg"><div class="result-bar" id="bar-flyer" style="width:0%"></div></div>
+      <span class="result-count" id="count-flyer">–</span>
+    </div>
+    <div class="result-row">
+      <span class="result-label">Zeitung</span>
+      <div class="result-bar-bg"><div class="result-bar" id="bar-zeitung" style="width:0%"></div></div>
+      <span class="result-count" id="count-zeitung">–</span>
+    </div>
+    <p class="result-total">Die Gesamtergebnisse aller Teilnehmer sind nur für den Kursleiter sichtbar.</p>
+  </div>
+</div>
+
+<script>
+  const FORM_ID   = '1hVWpdU-HZy8uQw7MSi-VmKobbk38kFbcMu4VqXDJPV0';
+  const ENTRY_ID  = 'entry.1656248590';
+  const FORM_URL  = 'https://docs.google.com/forms/d/' + FORM_ID + '/formResponse';
+  const VOTED_KEY = 'abstimmung_voted_v1';
+  const selected  = new Set();
+
+  function hasVoted() {
+    return !!localStorage.getItem(VOTED_KEY);
+  }
+
+  function toggleOption(card) {
+    const opt = card.dataset.option;
+    if (selected.has(opt)) {
+      selected.delete(opt);
+      card.classList.remove('selected');
+    } else {
+      if (selected.size >= 2) return;
+      selected.add(opt);
+      card.classList.add('selected');
+    }
+    const n = selected.size;
+    document.getElementById('counter').textContent = n + ' von 2 Stimmen vergeben';
+    document.getElementById('vote-btn').disabled = n === 0;
+  }
+
+  async function sendToGoogle(option) {
+    const body = new FormData();
+    body.append(ENTRY_ID, option);
+    await fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body });
+  }
+
+  async function submitVote() {
+    const btn = document.getElementById('vote-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Wird gespeichert\u2026';
+
+    await Promise.all([...selected].map(opt => sendToGoogle(opt)));
+
+    localStorage.setItem(VOTED_KEY, JSON.stringify([...selected]));
+    showResults([...selected]);
+  }
+
+  function showResults(choices) {
+    document.getElementById('vote-section').style.display = 'none';
+    document.getElementById('result-section').style.display = 'block';
+    setTimeout(() => {
+      ['Podcast', 'Flyer', 'Zeitung'].forEach(opt => {
+        const chosen = choices.includes(opt);
+        document.getElementById('bar-' + opt.toLowerCase()).style.width = chosen ? '100%' : '0%';
+        document.getElementById('count-' + opt.toLowerCase()).textContent = chosen ? 'Gewählt' : 'Nicht gewählt';
+      });
+    }, 100);
+  }
+
+  if (hasVoted()) {
+    showResults(JSON.parse(localStorage.getItem(VOTED_KEY) || '[]'));
+  }
+</script>
+</body>
+</html>
